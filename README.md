@@ -1,6 +1,6 @@
 # Online Movie Registration Form
 
-A cleaned and portfolio-ready static registration form for a movie streaming account. The original project provided a simple HTML form and a thank-you page; this version preserves that flow while organizing the code into a maintainable static web structure.
+A static registration form for a movie streaming account. The app collects basic user details, validates the form in the browser, and shows a confirmation page after submission.
 
 ## Features
 
@@ -23,8 +23,6 @@ online-movie-registration-form/
 |-- assets/
 |   |-- registration-form.png
 |   `-- thank-you-page.png
-|-- docs/
-|   `-- inferred-components.md
 |-- src/
 |   |-- index.html
 |   |-- script.js
@@ -54,7 +52,3 @@ Registration form:
 Successful registration page:
 
 ![Successful registration page](assets/thank-you-page.png)
-
-## Source Notes
-
-The source ZIP included a two-page HTML project. The embedded `.git` directory from the archive was intentionally excluded from the cleaned repository structure.
