@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Binge Watch Online | Registration</title>
+    <link rel="stylesheet" href="./styles.css">
+    <script src="./script.js" defer></script>
+  </head>
+  <body>
+    <main class="page-shell">
+      <section class="form-panel" aria-labelledby="page-title">
+        <div class="form-heading">
+          <p class="eyebrow">Binge Watch Online</p>
+          <h1 id="page-title">Create your movie account</h1>
+          <p>Register your basic details, preferred genre, and subscription plan.</p>
+        </div>
+
+        <form id="registration-form" action="./thankyou.html" novalidate>
+          <div class="field-grid">
+            <label>
+              First name
+              <input type="text" name="firstName" autocomplete="given-name" required>
+            </label>
+
+            <label>
+              Last name
+              <input type="text" name="lastName" autocomplete="family-name" required>
+            </label>
+          </div>
+
+          <fieldset>
+            <legend>Gender</legend>
+            <label class="choice"><input type="radio" name="gender" value="male" required> Male</label>
+            <label class="choice"><input type="radio" name="gender" value="female"> Female</label>
+            <label class="choice"><input type="radio" name="gender" value="other"> Other</label>
+          </fieldset>
+
+          <div class="field-grid phone-grid">
+            <label>
+              Country code
+              <input type="tel" name="countryCode" value="+91" required>
+            </label>
+
+            <label>
+              Phone
+              <input type="tel" name="phone" autocomplete="tel-national" pattern="[0-9]{10}" required>
+            </label>
+          </div>
+
+          <label>
+            Email
+            <input type="email" name="email" autocomplete="email" required>
+          </label>
+
+          <div class="field-grid">
+            <label>
+              Password
+              <input id="password" type="password" name="password" minlength="8" required>
+            </label>
+
+            <label>
+              Re-type password
+              <input id="confirm-password" type="password" name="confirmPassword" minlength="8" required>
+            </label>
+          </div>
+
+          <div class="field-grid">
+            <label>
+              Movie genre
+              <select name="genre" required>
+                <option value="">Select a genre</option>
+                <option>Action</option>
+                <option>Romance</option>
+                <option>Adventure</option>
+                <option>Horror</option>
+                <option>Animation</option>
+                <option>Comedy</option>
+              </select>
+            </label>
+
+            <label>
+              Plan
+              <select name="plan" required>
+                <option value="">Select a plan</option>
+                <option>Monthly Plan</option>
+                <option>Half-yearly Plan</option>
+                <option>Yearly Plan</option>
+              </select>
+            </label>
+          </div>
+
+          <p class="terms">By creating an account you agree to the Terms and Privacy policy.</p>
+          <p id="form-message" class="form-message" role="alert" aria-live="polite"></p>
+
+          <div class="actions">
+            <button type="submit">Submit</button>
+            <button class="secondary" type="reset">Reset</button>
+          </div>
+        </form>
+      </section>
+    </main>
+  </body>
+</html>
