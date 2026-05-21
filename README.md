@@ -1,110 +1,72 @@
-# Binge Watch Online - AWS Cloud Deployment Project
+# AWS Global Website Deployment (Binge Watch Online)
 
-This project is a simple AWS deployment setup for the Binge Watch Online website. The original website is a static movie registration form, so I kept it as static HTML and focused on how it can be hosted on AWS properly.
+## Business Objective
 
-The problem is that the website is slow for global users when the files are served from one place. Static files like HTML pages should not depend on only one server location. For this project, S3 stores the website files, CloudFront caches them closer to users, and Route 53 routes the domain name to CloudFront.
+Binge Watch Online needs a static website deployment that can serve global users with better page load performance. The site is a small HTML registration flow, so the hosting model keeps the application static and moves delivery closer to users through CDN caching.
 
-EC2 is used only as a support/testing VM. It is not the main website server.
+## Cloud Architecture Overview
 
-## Project folders
+The website files in `src/` are uploaded to Amazon S3. Amazon CloudFront uses the S3 bucket as its origin and caches the pages at edge locations. Route 53 routes the public domain to the CloudFront distribution.
 
-```text
-website/
-  index.html
-  thankyou.html
-
-scripts/
-  upload-website.sh
-  sync-website.sh
-  ec2-s3-test.sh
-
-docs/
-  deployment-guide.md
-  team-storage.md
-
-architecture/
-  architecture.md
-
-screenshots/
-```
-
-## AWS services used
-
-- **S3** - stores the static website files
-- **CloudFront** - delivers the website through CDN caching
-- **Route 53** - handles DNS routing for the website domain
-- **EC2** - used for testing and AWS CLI access to S3
-
-## Simple architecture
+EC2 is not used to host the website. It is used as a support VM for AWS CLI checks, S3 upload/download validation, and operational testing. IAM controls access to the website bucket and the team sharing bucket.
 
 ```text
 User -> Route 53 -> CloudFront -> S3 website bucket
 
-EC2 VM -> S3 website bucket
-EC2 VM -> S3 team sharing bucket
+EC2 support VM -> AWS CLI -> S3 buckets
 ```
 
-The website files are uploaded to an S3 bucket. CloudFront is connected to that bucket and serves the site from its CDN locations. Route 53 points the domain name to the CloudFront distribution.
+The draw.io source is available at `docs/architecture.drawio`.
 
-The EC2 VM is separate. I would use it to test AWS CLI access, upload a test file, or check that the S3 buckets are reachable.
+## Services Used
 
-## Deployment steps
+- Amazon S3
+- Amazon CloudFront
+- Amazon Route 53
+- Amazon EC2
+- AWS IAM
+- Amazon VPC for the EC2 support VM network
 
-1. Create an S3 bucket for the website files.
-2. Upload the files from the `website/` folder.
-3. Create a CloudFront distribution and use the S3 bucket as the origin.
-4. Set `index.html` as the default root object in CloudFront.
-5. Create a Route 53 hosted zone or use an existing one.
-6. Add an alias record in Route 53 pointing to the CloudFront distribution.
-7. Create a separate S3 bucket for team sharing.
-8. Launch a small EC2 instance and configure AWS CLI on it.
-9. Test EC2 access to S3 using the commands in `scripts/ec2-s3-test.sh`.
+## Deployment Workflow
 
-## CLI examples
+1. Create a private S3 bucket for the static website files.
+2. Upload the contents of `src/` to the website bucket.
+3. Create a CloudFront distribution with the S3 bucket as the origin.
+4. Set `index.html` as the CloudFront default root object.
+5. Configure Route 53 with an alias record pointing the domain to CloudFront.
+6. Create a separate S3 bucket for team file sharing.
+7. Launch a small EC2 instance in a VPC subnet for testing and AWS CLI access.
+8. Validate S3 access from EC2 using the scripts in `infrastructure/scripts/`.
 
-The scripts are small examples, not a full automation system.
-
-Upload website first time:
+Example upload command:
 
 ```bash
-./scripts/upload-website.sh binge-watch-website-bucket
+./infrastructure/scripts/upload-website.sh binge-watch-online-site
 ```
 
-Sync later changes:
+Example sync with CloudFront invalidation:
 
 ```bash
-./scripts/sync-website.sh binge-watch-website-bucket
+./infrastructure/scripts/sync-website.sh binge-watch-online-site E1234567890ABC
 ```
 
-Test EC2 access to S3:
+## Security Considerations
 
-```bash
-./scripts/ec2-s3-test.sh binge-watch-website-bucket binge-watch-team-share-bucket
-```
+- Keep the S3 website bucket private and expose content through CloudFront.
+- Use IAM roles or scoped IAM users for S3 access.
+- Restrict EC2 SSH access to an approved admin IP range.
+- Keep the team sharing bucket separate from the public website bucket.
+- Avoid using EC2 as the public web server for this static workload.
 
-## Team file sharing
+## Performance and Scalability Improvements
 
-For teammates, I would create a separate S3 bucket such as:
+CloudFront reduces repeated origin requests and improves loading for users outside the S3 bucket region. Static assets are cacheable, so the setup scales better than serving all users from a single VM.
 
-```text
-binge-watch-team-share
-```
+Route 53 provides DNS routing to the CloudFront distribution. If the website grows later, DNS and CloudFront settings can be adjusted without changing the source HTML.
 
-This bucket is for shared notes, reports, and project files. It should stay private. Access can be given through IAM users or roles, depending on who needs to upload or download files.
+## Operational Insights
 
-The EC2 instance can use AWS CLI to copy files to and from this bucket.
-
-## Cost and governance
-
-For a small student project, I would keep this simple:
-
-- use clear bucket names for dev/test/prod if needed
-- add tags like `Project=BingeWatchOnline`
-- keep S3 buckets private unless there is a clear reason
-- stop the EC2 instance when not using it
-- set a small AWS Budget alert
-- check CloudFront and S3 usage if traffic increases
-
-## Notes
-
-This is not meant to be a large company architecture. It is a practical AWS setup for a static website that needs better global loading speed.
+- Use CloudFront invalidations when updated pages need to appear immediately.
+- Review S3 and CloudFront usage for unexpected traffic spikes.
+- Stop the EC2 support VM when it is not needed.
+- Apply resource tags such as `Project=BingeWatchOnline` and `Environment=ProductionLike`.

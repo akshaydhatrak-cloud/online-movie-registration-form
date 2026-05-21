@@ -1,6 +1,6 @@
 # Team Storage
 
-The project also needs storage for teammates to share files. For that, I would use a second S3 bucket.
+The project also needs storage for teammates to share files. A second S3 bucket is used for that purpose.
 
 Example bucket:
 
