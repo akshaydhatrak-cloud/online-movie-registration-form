@@ -1,72 +1,77 @@
-# AWS Global Website Deployment (Binge Watch Online)
+# AWS Global Website Deployment - Binge Watch Online
 
-## Business Objective
+## Overview
 
-Binge Watch Online needs a static website deployment that can serve global users with better page load performance. The site is a small HTML registration flow, so the hosting model keeps the application static and moves delivery closer to users through CDN caching.
+This project deploys a static entertainment website for Binge Watch Online using AWS storage, CDN, and DNS services. The website stays as a static HTML application in `src/`; EC2 is only used as a support VM for AWS CLI testing and S3 access checks.
 
-## Cloud Architecture Overview
+## Architecture
 
-The website files in `src/` are uploaded to Amazon S3. Amazon CloudFront uses the S3 bucket as its origin and caches the pages at edge locations. Route 53 routes the public domain to the CloudFront distribution.
-
-EC2 is not used to host the website. It is used as a support VM for AWS CLI checks, S3 upload/download validation, and operational testing. IAM controls access to the website bucket and the team sharing bucket.
+The public traffic path is:
 
 ```text
 User -> Route 53 -> CloudFront -> S3 website bucket
-
-EC2 support VM -> AWS CLI -> S3 buckets
 ```
 
-The draw.io source is available at `docs/architecture.drawio`.
+The operations path is separate:
+
+```text
+EC2 support VM -> AWS CLI -> S3 website bucket
+EC2 support VM -> AWS CLI -> S3 team share bucket
+```
+
+Architecture files are in `architecture/`:
+
+- `architecture.mmd`
+- `architecture.svg`
+- `architecture.drawio`
 
 ## Services Used
 
-- Amazon S3
-- Amazon CloudFront
-- Amazon Route 53
-- Amazon EC2
-- AWS IAM
-- Amazon VPC for the EC2 support VM network
+- Amazon S3 for static website files and team file sharing
+- Amazon CloudFront for CDN caching
+- Amazon Route 53 for DNS routing
+- Amazon EC2 for support/testing access
+- IAM for scoped S3 permissions
 
-## Deployment Workflow
+## Deployment Steps
 
-1. Create a private S3 bucket for the static website files.
-2. Upload the contents of `src/` to the website bucket.
+1. Create an S3 bucket for the static website files.
+2. Upload the files from `src/` to the bucket.
 3. Create a CloudFront distribution with the S3 bucket as the origin.
 4. Set `index.html` as the CloudFront default root object.
-5. Configure Route 53 with an alias record pointing the domain to CloudFront.
-6. Create a separate S3 bucket for team file sharing.
-7. Launch a small EC2 instance in a VPC subnet for testing and AWS CLI access.
-8. Validate S3 access from EC2 using the scripts in `infrastructure/scripts/`.
+5. Configure Route 53 with an alias record pointing to CloudFront.
+6. Create a second S3 bucket for team file sharing.
+7. Launch a small EC2 instance and attach IAM access for the required S3 buckets.
+8. Run the S3 validation script from the EC2 instance.
 
-Example upload command:
-
-```bash
-./infrastructure/scripts/upload-website.sh binge-watch-online-site
-```
-
-Example sync with CloudFront invalidation:
+Upload the site:
 
 ```bash
-./infrastructure/scripts/sync-website.sh binge-watch-online-site E1234567890ABC
+./scripts/upload-website.sh binge-watch-online-site
 ```
 
-## Security Considerations
+Sync updates and optionally invalidate CloudFront:
 
-- Keep the S3 website bucket private and expose content through CloudFront.
-- Use IAM roles or scoped IAM users for S3 access.
-- Restrict EC2 SSH access to an approved admin IP range.
-- Keep the team sharing bucket separate from the public website bucket.
-- Avoid using EC2 as the public web server for this static workload.
+```bash
+./scripts/sync-website.sh binge-watch-online-site E1234567890ABC
+```
 
-## Performance and Scalability Improvements
+Test EC2 access to S3:
 
-CloudFront reduces repeated origin requests and improves loading for users outside the S3 bucket region. Static assets are cacheable, so the setup scales better than serving all users from a single VM.
+```bash
+./scripts/ec2-s3-test.sh binge-watch-online-site binge-watch-team-share
+```
 
-Route 53 provides DNS routing to the CloudFront distribution. If the website grows later, DNS and CloudFront settings can be adjusted without changing the source HTML.
+## Troubleshooting
 
-## Operational Insights
+- If the CloudFront URL shows an older page, run the sync script with the distribution ID so it creates an invalidation.
+- If `aws s3 ls` fails from EC2, check the IAM role or AWS CLI credentials.
+- If the website loads without the thank you page, confirm both `index.html` and `thankyou.html` are in the S3 bucket.
+- If Route 53 does not resolve, check the alias target and wait for DNS propagation.
 
-- Use CloudFront invalidations when updated pages need to appear immediately.
-- Review S3 and CloudFront usage for unexpected traffic spikes.
-- Stop the EC2 support VM when it is not needed.
-- Apply resource tags such as `Project=BingeWatchOnline` and `Environment=ProductionLike`.
+## What I Learned
+
+- Static websites do not need EC2 as the public hosting layer.
+- CloudFront is useful when static assets are requested from different locations.
+- S3 buckets should be separated by purpose: public website origin and private team sharing.
+- Small helper scripts make repeat uploads less error-prone.
