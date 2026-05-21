@@ -1,11 +1,16 @@
 #!/usr/bin/env bash
-set -e
+set -euo pipefail
 
-WEBSITE_BUCKET="$1"
-TEAM_BUCKET="$2"
+WEBSITE_BUCKET="${1:-}"
+TEAM_BUCKET="${2:-}"
 
 if [ -z "$WEBSITE_BUCKET" ] || [ -z "$TEAM_BUCKET" ]; then
-  echo "Usage: ./infrastructure/scripts/ec2-s3-test.sh <website-bucket-name> <team-share-bucket-name>"
+  echo "Usage: ./scripts/ec2-s3-test.sh <website-bucket-name> <team-share-bucket-name>"
+  exit 1
+fi
+
+if ! command -v aws >/dev/null 2>&1; then
+  echo "AWS CLI is not installed or not available in PATH."
   exit 1
 fi
 
