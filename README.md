@@ -1,108 +1,134 @@
 # Binge Watch Online - AWS Cloud Deployment Project
 
-This repository contains a small static website for **Binge Watch Online**, an online entertainment provider. The main aim of this project is not to redesign the website, but to deploy it properly on AWS so users from different regions can load the pages faster.
+This is a small AWS deployment project for a static entertainment website. The website itself is simple HTML, CSS, and JavaScript. The main work is deploying it properly using S3, CloudFront, Route 53, and EC2.
 
-The website files are kept simple because the cloud setup is the main part of the assignment.
+I made this as a practical cloud project, not a big production setup.
 
-## Problem Statement
+## What this project deploys
 
-Binge Watch Online has a website that is getting traffic from different parts of the world. At first the static pages and files were being served from one place, so users far away from the server were facing slow page reloads.
+- S3 bucket for static website files
+- CloudFront distribution in front of the S3 bucket
+- optional Route 53 alias record for a custom domain
+- separate S3 bucket for teammate file sharing
+- IAM role for EC2 to access the S3 buckets
+- optional Amazon Linux EC2 VM for testing S3 access
 
-To improve this, the static website content is uploaded to Amazon S3 and delivered through Amazon CloudFront. Route 53 is used for DNS routing so users can access the site using a proper domain name. EC2 is included as the virtual machine service for admin/testing work and for connecting with storage.
-
-## AWS Services Used
-
-- **Amazon S3** - stores the static website files like HTML, CSS, JS, and shared files
-- **Amazon CloudFront** - CDN used to cache website files closer to users
-- **Amazon Route 53** - manages DNS and points the domain to CloudFront
-- **Amazon EC2** - used as a Linux or Windows VM for testing/admin work and connecting to S3
-
-## Project Structure
+## Folder structure
 
 ```text
-online-movie-registration-form/
-|-- architecture/
-|   `-- simple-architecture.md
-|-- deployment/
-|   `-- aws-cli-notes.md
-|-- docs/
-|   |-- architecture.md
-|   `-- deployment-guide.md
-|-- screenshots/
-|   |-- registration-form.png
-|   `-- thank-you-page.png
-|-- website/
-|   |-- index.html
-|   |-- script.js
-|   |-- styles.css
-|   `-- thankyou.html
-`-- README.md
+architecture/
+  simple-architecture.md
+deployment/
+  cloudformation/binge-watch-online.yaml
+  config.example.json
+  scripts/deploy-stack.ps1
+  scripts/sync-website.ps1
+  scripts/test-ec2-s3-access.sh
+docs/
+  architecture.md
+  deployment-guide.md
+screenshots/
+  registration-form.png
+  thank-you-page.png
+website/
+  index.html
+  script.js
+  styles.css
+  thankyou.html
 ```
 
-## Basic Architecture
-
-The user opens the website domain in their browser. Route 53 handles the DNS request and sends the user to the CloudFront distribution. CloudFront checks if it already has the static files cached at an edge location. If not, it gets the files from the S3 bucket.
-
-The rough flow is:
+## Architecture
 
 ```text
-User -> Route 53 -> CloudFront -> S3 bucket -> Website files
+User -> Route 53 -> CloudFront -> S3 website bucket
+
+EC2 VM -> S3 website bucket
+EC2 VM -> S3 team share bucket
 ```
 
-EC2 is not hosting the static website in this design. I am using it more like a support VM, for example to test access, run AWS CLI commands, or connect with S3 for shared storage work.
+CloudFront is used because users may visit the site from different countries. Instead of every request going back to one server, CloudFront can serve cached files from edge locations.
 
-For DNS-level routing, Route 53 will use an alias record for the CloudFront distribution. If the company later adds more endpoints, Route 53 latency based routing can be added, but for this project one CloudFront distribution is enough.
+## Before running
 
-## Deployment Steps
+You need:
 
-1. Create an S3 bucket for the website files.
-2. Upload everything inside the `website/` folder to the bucket.
-3. Create a CloudFront distribution and set the S3 bucket as the origin.
-4. Configure the default root object as `index.html`.
-5. Use Route 53 to point the domain name to the CloudFront distribution.
-6. Launch an EC2 instance for testing and admin tasks.
-7. Install AWS CLI on the EC2 instance and test access to the S3 bucket.
+- AWS CLI installed
+- AWS credentials configured
+- PowerShell
+- bucket names that are globally unique
 
-More detailed steps are written in [docs/deployment-guide.md](docs/deployment-guide.md).
+Copy the config example:
 
-## CDN Explanation
+```powershell
+Copy-Item .\deployment\config.example.json .\deployment\config.json
+```
 
-CloudFront helps because it keeps copies of the static files in edge locations. If someone opens the website from another country, the content does not always need to come from the original S3 location. This should reduce load time for pages, images, CSS, and JavaScript.
+Then edit `deployment/config.json` and change at least:
 
-For this project the CDN is useful because the website is mostly static and does not need a backend server for every request.
+```json
+"WebsiteBucketName": "your-unique-website-bucket",
+"TeamShareBucketName": "your-unique-team-share-bucket"
+```
 
-## Governance Ideas
+If you do not have a domain yet, leave Route 53 values empty. The CloudFront URL will still work.
 
-For development, testing, and production, I would keep separate S3 buckets and clear naming. Example:
+## Deploy AWS resources
 
-- `binge-watch-dev-site`
-- `binge-watch-test-site`
-- `binge-watch-prod-site`
+Run this from the repository root:
 
-I would also use IAM users or roles with only the access they need. For example, a teammate uploading files should not be able to delete billing settings or change Route 53 records.
+```powershell
+.\deployment\scripts\deploy-stack.ps1
+```
 
-Tags can be added to resources so it is easier to track them later:
+This creates the AWS resources using CloudFormation.
 
-- `Project = BingeWatchOnline`
-- `Environment = Dev/Test/Prod`
-- `Owner = CloudStudent`
+## Upload the website
 
-## Billing and Cost Management
+After the stack is created, upload the files from `website/`:
 
-AWS Budgets can be used to set a monthly alert, like warning me if the project goes above a small test budget. Cost Explorer can show which service is costing more.
+```powershell
+.\deployment\scripts\sync-website.ps1
+```
 
-For this project, the main costs may come from CloudFront data transfer, S3 storage/requests, Route 53 hosted zone charges, and EC2 running time. I would stop the EC2 instance when I am not using it.
+If the site was already cached in CloudFront and you updated files, run:
 
-## Shared Storage for Teammates
+```powershell
+.\deployment\scripts\sync-website.ps1 -Invalidate
+```
 
-A separate S3 bucket or folder can be used for team files. Teammates can upload screenshots, notes, and deployment files there. Access should be controlled using IAM policies instead of making everything public.
+## Route 53
 
-The EC2 VM can connect to S3 using AWS CLI:
+If a domain is available, add these values in `deployment/config.json`:
+
+```json
+"HostedZoneId": "YOUR_HOSTED_ZONE_ID",
+"DomainName": "www.yourdomain.com",
+"AcmCertificateArn": "YOUR_US_EAST_1_CERTIFICATE_ARN"
+```
+
+CloudFront needs the ACM certificate to be in `us-east-1`.
+
+## EC2 and storage test
+
+The template creates an EC2 IAM role even if the VM is not launched. To launch the VM, set this in config:
+
+```json
+"CreateEc2": "true",
+"VpcId": "vpc-xxxx",
+"SubnetId": "subnet-xxxx",
+"KeyName": "your-key-name",
+"AdminCidr": "your-ip/32"
+```
+
+After connecting to the EC2 instance, the storage access can be tested with:
 
 ```bash
-aws s3 ls
-aws s3 cp ./notes.txt s3://binge-watch-team-share/
+./test-ec2-s3-access.sh website-bucket-name team-share-bucket-name
 ```
+
+## Cost notes
+
+For a student project, I would keep an AWS Budget alert on the account and stop the EC2 instance when I am not using it. Most of the cost should be small, but Route 53 hosted zones, EC2 running time, CloudFront traffic, and S3 requests can still add up.
 
 ## Screenshots
 
@@ -110,18 +136,10 @@ Registration page:
 
 ![Binge Watch Online registration form](screenshots/registration-form.png)
 
-Confirmation page:
+Thank you page:
 
-![Binge Watch Online confirmation page](screenshots/thank-you-page.png)
+![Binge Watch Online thank you page](screenshots/thank-you-page.png)
 
-## Future Improvements
+## Notes
 
-- Add a custom domain with HTTPS using AWS Certificate Manager
-- Add CloudFront invalidation steps after updating files
-- Keep a simple version history of uploaded website files
-- Add better error pages like `404.html`
-- Use separate AWS accounts if the project becomes bigger
-
-## Conclusion
-
-This project shows a practical way to deploy a small entertainment website on AWS. S3 stores the static files, CloudFront improves loading speed globally, Route 53 handles DNS, and EC2 is used for testing and storage access tasks. It is a simple setup, but it matches the problem better than running the whole static website from only one server.
+I kept the frontend simple on purpose. This project is mainly about cloud deployment and CDN delivery, not making a new React app or adding extra tools that are not needed for the assignment.

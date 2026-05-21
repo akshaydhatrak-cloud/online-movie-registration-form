@@ -1,0 +1,4 @@
+deployment/config.json
+.aws-sam/
+.DS_Store
+Thumbs.db
