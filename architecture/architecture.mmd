@@ -1,0 +1,10 @@
+flowchart LR
+  user[Global users] --> r53[Route 53 DNS]
+  r53 --> cf[CloudFront CDN]
+  cf --> s3[S3 website bucket]
+
+  ec2[EC2 support VM] -. AWS CLI .-> s3
+  ec2 -. upload/download .-> share[S3 team share bucket]
+  iam[IAM scoped access] -. controls .-> ec2
+  iam -. controls .-> s3
+  iam -. controls .-> share
